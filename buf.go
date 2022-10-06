@@ -17,10 +17,12 @@ type buffer struct {
 	buf []byte
 	pos int
 }
-
+type rwPool struct {
+	r chan *buffer
+	w chan *buffer
+}
 type Ring struct {
-	rpool        chan *buffer
-	wpool        chan *buffer
+	pool         rwPool
 	len          int
 	blockingMode bool
 }
@@ -33,13 +35,15 @@ func New(isBlock bool, ringOpts ...int) *Ring {
 	r := &Ring{
 		blockingMode: isBlock,
 		len:          size,
-		rpool:        make(chan *buffer, size),
-		wpool:        make(chan *buffer, size),
+		pool: rwPool{
+			r: make(chan *buffer, size),
+			w: make(chan *buffer, size),
+		},
 	}
 	return r
 }
 
-func (b *buffer) read(wpool chan *buffer, buf []byte) (n int) {
+func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
@@ -47,21 +51,28 @@ func (b *buffer) read(wpool chan *buffer, buf []byte) (n int) {
 	b.pos -= n
 	if b.pos == 0 {
 		select {
-		case wpool <- b:
+		case pool.w <- b:
+		default:
+		}
+	} else {
+		// if reading is not done, put it into the reading pool
+		// let's read it again
+		select {
+		case pool.r <- b:
 		default:
 		}
 	}
 	return
 }
 
-func (b *buffer) write(rpool chan *buffer, buf []byte) (n int) {
+func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	if b.pos == len(b.buf) {
 		b.pos = 0
 	}
 	n = copy(b.buf[b.pos:], buf)
 	b.pos += n
 	select {
-	case rpool <- b:
+	case pool.r <- b:
 	default:
 	}
 	return
@@ -70,32 +81,32 @@ func (b *buffer) write(rpool chan *buffer, buf []byte) (n int) {
 func (r *Ring) Read(b []byte) (n int, err error) {
 	var buf *buffer
 	if r.blockingMode {
-		buf = <-r.rpool
+		buf = <-r.pool.r
 	} else {
 		// non-blocking
 		// if buffer pool is empty, return the error immediately.
 		select {
-		case buf = <-r.rpool:
+		case buf = <-r.pool.r:
 		default:
 			err = POOL_EMPTY
 			return
 		}
 	}
-	n = buf.read(r.wpool, b)
+	n = buf.read(&r.pool, b)
 
 	for n < len(b) {
 		if r.blockingMode {
-			buf = <-r.rpool
+			buf = <-r.pool.r
 		} else {
 			// non-blocking
 			// if buffer pool is empty, return immediately.
 			select {
-			case buf = <-r.rpool:
+			case buf = <-r.pool.r:
 			default:
 				return
 			}
 		}
-		nr := buf.read(r.wpool, b)
+		nr := buf.read(&r.pool, b)
 		n += nr
 	}
 	return
@@ -104,22 +115,22 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 func (r *Ring) Write(b []byte) (n int, err error) {
 	var buf *buffer
 	select {
-	case buf = <-r.wpool:
+	case buf = <-r.pool.w:
 	default:
 		buf = &buffer{
 			buf: make([]byte, DEFAULT_BUF_SIZE),
 		}
 	}
-	n = buf.write(r.rpool, b)
+	n = buf.write(&r.pool, b)
 	for n < len(b) {
 		select {
-		case buf = <-r.wpool:
+		case buf = <-r.pool.w:
 		default:
 			buf = &buffer{
 				buf: make([]byte, DEFAULT_BUF_SIZE),
 			}
 		}
-		nw := buf.write(r.rpool, b)
+		nw := buf.write(&r.pool, b)
 		n += nw
 	}
 	return
