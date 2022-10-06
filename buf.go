@@ -45,9 +45,11 @@ func (b *buffer) read(wpool chan *buffer, buf []byte) (n int) {
 	}
 	n = copy(buf, b.buf[b.pos:])
 	b.pos -= n
-	select {
-	case wpool <- b:
-	default:
+	if b.pos == 0 {
+		select {
+		case wpool <- b:
+		default:
+		}
 	}
 	return
 }
