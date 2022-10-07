@@ -35,11 +35,9 @@ func New(isBlock bool, ringOpts ...int) *Ring {
 	r := &Ring{
 		blockingMode: isBlock,
 		len:          size,
-		pool: rwPool{
-			r: make(chan *buffer, size),
-			w: make(chan *buffer, size),
-		},
 	}
+	r.pool.r = make(chan *buffer, size)
+	r.pool.w = make(chan *buffer, size)
 	return r
 }
 
