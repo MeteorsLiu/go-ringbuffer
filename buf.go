@@ -38,8 +38,7 @@ type rwPool struct {
 	// reference counter
 	// if the wrefcnt reaches zero, the wleftover pool will be swept forcely.
 	// it avoids the memory leak.
-	wrefcnt int32
-	// is it flushing the pool?
+	wrefcnt  int32
 	flushing int32
 }
 type Ring struct {
