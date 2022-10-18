@@ -134,7 +134,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
-		b.buf = b.buf[b.pos:len(b.buf)]
+		b.buf = b.buf[b.pos:]
 		select {
 		case pool.rleftover <- b:
 		default:
@@ -251,11 +251,12 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	}
 	n = buf.write(&r.pool, b)
 	// no to clean the pool while writing the leftover
-	log.Printf("n: %d", n)
+	//log.Printf("n: %d, lenb: %d", n, len(b))
 	if n < len(b) {
 		atomic.AddInt32(&r.pool.wrefcnt, 1)
 		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
+	log.Printf("n: %d, lenb: %d", n, len(b))
 	for n < len(b) {
 		select {
 		case buf = <-r.pool.w:
