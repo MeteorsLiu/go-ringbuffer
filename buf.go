@@ -257,7 +257,9 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	}
 	n = buf.write(&r.pool, b)
 	// no to clean the pool while writing the leftover
+	log.Printf("Buf pos: %d", buf.pos)
 	if n < len(b) {
+		log.Println("Leftover!")
 		atomic.AddInt32(&r.pool.wrefcnt, 1)
 		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
