@@ -213,21 +213,13 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 	}
 	atomic.AddInt32(&r.pool.wrefcnt, 1)
 	defer atomic.AddInt32(&r.pool.wrefcnt, -1)
-	if r.blockingMode {
-		select {
-		case buf = <-r.pool.wleftover:
-		default:
-			buf = r.grabReadBuffer()
-		}
-	} else {
-		// non-blocking
-		// if buffer pool is empty, return the error immediately.
-		select {
-		case buf = <-r.pool.wleftover:
-		default:
-			buf = r.grabReadBuffer()
-		}
+
+	select {
+	case buf = <-r.pool.wleftover:
+	default:
+		buf = r.grabReadBuffer()
 	}
+
 	return buf
 }
 
