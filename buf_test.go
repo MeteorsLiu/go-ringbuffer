@@ -15,7 +15,7 @@ func TestRingBuffer(t *testing.T) {
 	t.Log(r.Write(smallbuf))
 	copy(smallbuf, "23456")
 	t.Log(r.Read(smallbuf))
-	t.Log(smallbuf)
+	t.Log(string(smallbuf))
 
 	hugebuf := make([]byte, 65536)
 	io.ReadFull(rand.Reader, hugebuf)
