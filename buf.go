@@ -3,6 +3,7 @@ package ringbuffer
 import (
 	"errors"
 	"io"
+	"log"
 	"sync/atomic"
 )
 
@@ -231,6 +232,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 		return
 	}
 	n = buf.read(&r.pool, b)
+	log.Printf("transfer: %d", n)
 	// if reading is not done, there will no more reading leftover buffer produced.
 	// so try to grab the writing leftover buffer
 	for n < len(b) {
