@@ -9,9 +9,11 @@ import (
 const (
 	DEFAULT_RING_LEN = 1024
 
-	// By default, the PAGE_SIZE is 4096.
+	// By default, the PAGE_SIZE is 4096 Bytes.
 	// so may be more efficient for slices?
 	DEFAULT_BUF_SIZE = 4096
+	// 2MB per HUGE PAGE
+	HUGE_PAGE_SIZE = 1024 * 1024 * 2
 )
 
 var (
@@ -260,9 +262,16 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	select {
 	case buf = <-r.pool.w:
 	default:
-		buf = &buffer{
-			buf: make([]byte, DEFAULT_BUF_SIZE),
+		if len(b) >= HUGE_PAGE_SIZE {
+			buf = &buffer{
+				buf: make([]byte, HUGE_PAGE_SIZE),
+			}
+		} else {
+			buf = &buffer{
+				buf: make([]byte, DEFAULT_BUF_SIZE),
+			}
 		}
+
 	}
 	n = buf.write(&r.pool, b)
 	// no to clean the pool while writing the leftover
@@ -274,8 +283,14 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 		select {
 		case buf = <-r.pool.w:
 		default:
-			buf = &buffer{
-				buf: make([]byte, DEFAULT_BUF_SIZE),
+			if len(b) >= HUGE_PAGE_SIZE {
+				buf = &buffer{
+					buf: make([]byte, HUGE_PAGE_SIZE),
+				}
+			} else {
+				buf = &buffer{
+					buf: make([]byte, DEFAULT_BUF_SIZE),
+				}
 			}
 		}
 		nw := buf.write_leftover(&r.pool, b[n:])
