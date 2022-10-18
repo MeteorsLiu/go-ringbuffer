@@ -90,7 +90,7 @@ func (p *rwPool) Flush(pool int) {
 			select {
 			case _ = <-p.w:
 			default:
-				break
+				return
 			}
 		}
 	case READING_LEFT:
@@ -104,7 +104,7 @@ func (p *rwPool) Flush(pool int) {
 				default:
 				}
 			default:
-				break
+				return
 			}
 		}
 	case WRITING_LEFT:
@@ -118,7 +118,7 @@ func (p *rwPool) Flush(pool int) {
 				default:
 				}
 			default:
-				break
+				return
 			}
 		}
 	}
@@ -242,6 +242,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 			return
 		}
 		nr := buf.read(&r.pool, b)
+		log.Printf("leftover: %d", nr)
 		n += nr
 	}
 	return
