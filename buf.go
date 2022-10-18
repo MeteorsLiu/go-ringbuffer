@@ -148,11 +148,9 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 }
 
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
-	if b.pos == len(b.buf) {
-		b.pos = 0
-	}
-	n = copy(b.buf[b.pos:], buf)
+	n = copy(b.buf[0:], buf)
 	b.pos += n
+
 	select {
 	case pool.r <- b:
 	default:
@@ -165,6 +163,7 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 		b.pos = 0
 	}
 	if atomic.LoadInt32(&pool.wrefcnt) == 0 && len(pool.wleftover) > 0 {
+		log.Println("Flush Pool")
 		pool.Flush(WRITING_LEFT)
 	}
 	n = copy(b.buf[b.pos:], buf)
