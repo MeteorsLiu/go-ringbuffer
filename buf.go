@@ -127,9 +127,10 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
+	log.Printf("buf size:%d", len(b.buf))
 	n = copy(buf, b.buf)
-	b.pos -= n
-	if b.pos == 0 {
+	b.pos += n
+	if b.pos == len(b.buf) {
 		select {
 		case pool.w <- b:
 		default:
@@ -137,7 +138,8 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
-		b.buf = b.buf[n:]
+		nb := len(b.buf)
+		b.buf = b.buf[b.pos:nb]
 		select {
 		case pool.rleftover <- b:
 		default:
@@ -149,7 +151,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.pos += n
+	b.buf = b.buf[:n]
 
 	select {
 	case pool.r <- b:
@@ -160,12 +162,11 @@ func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 
 func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 	if atomic.LoadInt32(&pool.wrefcnt) == 0 && len(pool.wleftover) > 0 {
-		log.Println("Flush Pool")
 		pool.Flush(WRITING_LEFT)
 	}
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.pos += n
+	b.buf = b.buf[:n]
 	select {
 	case pool.wleftover <- b:
 	default:
