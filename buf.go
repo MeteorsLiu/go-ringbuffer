@@ -234,9 +234,10 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 		if buf == nil {
 			return
 		}
-		nr := buf.read(&r.pool, b)
+		nr := buf.read(&r.pool, b[n:])
 		n += nr
 	}
+	b = b[0:]
 	return
 }
 
@@ -266,8 +267,8 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 			}
 		}
 		nw := buf.write_leftover(&r.pool, b[n:])
-		log.Printf("Leftover: %d", nw)
 		n += nw
 	}
+	b = b[0:]
 	return
 }
