@@ -19,7 +19,8 @@ func TestRingBuffer(t *testing.T) {
 
 	hugebuf := make([]byte, 65536)
 	hugebuf1 := make([]byte, 65536)
-	io.ReadFull(rand.Reader, hugebuf)
+	n, _ := io.ReadFull(rand.Reader, hugebuf)
+	hugebuf = hugebuf[:n]
 	hash := sha1.Sum(hugebuf)
 	t.Logf("First, %s", hex.EncodeToString(hash[:]))
 	t.Log(r.Write(hugebuf))
