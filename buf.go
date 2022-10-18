@@ -128,7 +128,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
-	n = copy(buf, b.buf)
+	n = copy(buf, b.buf[:b.len])
 	b.pos += n
 	if b.pos == b.len {
 		select {
@@ -150,7 +150,6 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.buf = b.buf[:n]
 	b.len = n
 	select {
 	case pool.r <- b:
@@ -165,7 +164,6 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 	}
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.buf = b.buf[:n]
 	b.len = n
 	select {
 	case pool.wleftover <- b:
