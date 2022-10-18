@@ -217,8 +217,7 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 		select {
 		case buf = <-r.pool.wleftover:
 		default:
-			// if there is nothing in leftover pool, try to grab it in the reading pool
-			buf = <-r.pool.r
+			buf = r.grabReadBuffer()
 		}
 	} else {
 		// non-blocking
@@ -226,13 +225,7 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 		select {
 		case buf = <-r.pool.wleftover:
 		default:
-			// if there is nothing in leftover pool, try to grab it in the reading pool
-			select {
-			case buf = <-r.pool.r:
-			default:
-				return nil
-
-			}
+			buf = r.grabReadBuffer()
 		}
 	}
 	return buf
