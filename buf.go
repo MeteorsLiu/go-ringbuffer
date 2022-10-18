@@ -216,6 +216,7 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 
 	select {
 	case buf = <-r.pool.wleftover:
+		log.Printf("grab left over!")
 	default:
 		buf = r.grabReadBuffer()
 	}
@@ -240,7 +241,6 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 			return
 		}
 		nr := buf.read(&r.pool, b)
-		log.Printf("leftover: %d", nr)
 		n += nr
 	}
 	return

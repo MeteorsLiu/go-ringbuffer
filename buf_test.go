@@ -18,6 +18,7 @@ func TestRingBuffer(t *testing.T) {
 	t.Log(string(smallbuf))
 
 	hugebuf := make([]byte, 65536)
+	hugebuf1 := make([]byte, 65536)
 	io.ReadFull(rand.Reader, hugebuf)
 	hash := sha1.Sum(hugebuf)
 	t.Logf("First, %s", hex.EncodeToString(hash[:]))
@@ -25,7 +26,7 @@ func TestRingBuffer(t *testing.T) {
 	io.ReadFull(rand.Reader, hugebuf)
 	hash = sha1.Sum(hugebuf)
 	t.Logf("Second, %s", hex.EncodeToString(hash[:]))
-	t.Log(r.Read(hugebuf))
-	hash = sha1.Sum(hugebuf)
+	t.Log(r.Read(hugebuf1))
+	hash = sha1.Sum(hugebuf1)
 	t.Logf("Third, %s", hex.EncodeToString(hash[:]))
 }
