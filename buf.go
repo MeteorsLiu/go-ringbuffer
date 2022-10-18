@@ -82,7 +82,7 @@ func (p *rwPool) Flush(pool int) {
 				default:
 				}
 			default:
-				break
+				return
 			}
 		}
 	case WRITING_POOL:
@@ -130,7 +130,6 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	n = copy(buf, b.buf)
 	b.pos -= n
 	if b.pos == 0 {
-		b.buf = b.buf[0:]
 		select {
 		case pool.w <- b:
 		default:
@@ -149,6 +148,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
+	b.pos = 0
 	b.pos += n
 
 	select {
@@ -164,6 +164,7 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 		pool.Flush(WRITING_LEFT)
 	}
 	n = copy(b.buf[0:], buf)
+	b.pos = 0
 	b.pos += n
 	select {
 	case pool.wleftover <- b:
