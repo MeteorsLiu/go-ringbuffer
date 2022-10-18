@@ -248,8 +248,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 		nr := buf.read(&r.pool, b[n:])
 		n += nr
 	}
-	// reset the position of the user's buffer
-	b = b[0:]
+
 	return
 }
 
@@ -296,6 +295,5 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 		nw := buf.write_leftover(&r.pool, b[n:])
 		n += nw
 	}
-	b = b[0:]
 	return
 }
