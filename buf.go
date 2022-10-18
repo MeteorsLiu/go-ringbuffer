@@ -22,7 +22,6 @@ var (
 type buffer struct {
 	buf []byte
 	pos int
-	len int
 }
 
 const (
@@ -135,7 +134,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
-		b.buf = b.buf[b.pos:b.len]
+		b.buf = b.buf[b.pos:len(b.buf)]
 		select {
 		case pool.rleftover <- b:
 		default:
@@ -147,7 +146,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.len = n
+	b.buf = b.buf[:n]
 	select {
 	case pool.r <- b:
 	default:
@@ -161,7 +160,7 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 	}
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
-	b.len = n
+	b.buf = b.buf[:n]
 	select {
 	case pool.wleftover <- b:
 	default:
@@ -230,7 +229,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 	log.Printf("transfer: %d", n)
 	// if reading is not done, there will no more reading leftover buffer produced.
 	// so try to grab the writing leftover buffer
-	for n <= len(b) {
+	for n < len(b) {
 		buf = r.grabLeftoverBuffer()
 		if buf == nil {
 			return
@@ -258,7 +257,7 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 		atomic.AddInt32(&r.pool.wrefcnt, 1)
 		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
-	for n <= len(b) {
+	for n < len(b) {
 		select {
 		case buf = <-r.pool.w:
 		default:
