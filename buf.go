@@ -230,7 +230,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 	log.Printf("transfer: %d", n)
 	// if reading is not done, there will no more reading leftover buffer produced.
 	// so try to grab the writing leftover buffer
-	for n < len(b) {
+	for n <= len(b) {
 		buf = r.grabLeftoverBuffer()
 		if buf == nil {
 			return
@@ -258,7 +258,7 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 		atomic.AddInt32(&r.pool.wrefcnt, 1)
 		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
-	for n < len(b) {
+	for n <= len(b) {
 		select {
 		case buf = <-r.pool.w:
 		default:
