@@ -253,7 +253,6 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	// no to clean the pool while writing the leftover
 	log.Printf("n: %d", n)
 	if n < len(b) {
-		log.Println("Leftover!")
 		atomic.AddInt32(&r.pool.wrefcnt, 1)
 		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
@@ -266,6 +265,7 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 			}
 		}
 		nw := buf.write_leftover(&r.pool, b)
+		log.Printf("Leftover: %d", nw)
 		n += nw
 	}
 	return
