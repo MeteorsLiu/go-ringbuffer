@@ -25,6 +25,6 @@ func TestRingBuffer(t *testing.T) {
 	t.Logf("First, %s", hex.EncodeToString(hash[:]))
 	t.Log(r.Write(hugebuf))
 	t.Log(r.Read(hugebuf1))
-	hash = sha1.Sum(hugebuf1)
-	t.Logf("Third, %s", hex.EncodeToString(hash[:]))
+	hash1 := sha1.Sum(hugebuf1)
+	t.Logf("Third, %s", hex.EncodeToString(hash1[:]))
 }
