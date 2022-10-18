@@ -240,7 +240,7 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 	// so try to grab the writing leftover buffer
 	for n < len(b) {
 		buf = r.grabLeftoverBuffer()
-		if buf == nil {
+		if buf == nil || len(buf.buf) == 0 {
 			return
 		}
 		nr := buf.read(&r.pool, b[n:])
@@ -276,10 +276,6 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 		default:
 			buf = &buffer{
 				buf: make([]byte, DEFAULT_BUF_SIZE),
-			}
-			if len(buf.buf) == 0 {
-				buf = nil
-				continue
 			}
 		}
 		nw := buf.write_leftover(&r.pool, b[n:])
