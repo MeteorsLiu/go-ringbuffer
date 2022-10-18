@@ -265,7 +265,7 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 				buf: make([]byte, DEFAULT_BUF_SIZE),
 			}
 		}
-		nw := buf.write_leftover(&r.pool, b)
+		nw := buf.write_leftover(&r.pool, b[n:])
 		log.Printf("Leftover: %d", nw)
 		n += nw
 	}
