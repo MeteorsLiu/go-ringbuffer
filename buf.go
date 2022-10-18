@@ -270,8 +270,10 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	}
 	n = buf.write(&r.pool, b)
 	// no to clean the pool while writing the leftover
-	atomic.AddInt32(&r.pool.wrefcnt, 1)
-	defer atomic.AddInt32(&r.pool.wrefcnt, -1)
+	if n < len(b) {
+		atomic.AddInt32(&r.pool.wrefcnt, 1)
+		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
+	}
 	for n < len(b) {
 		select {
 		case buf = <-r.pool.w:
