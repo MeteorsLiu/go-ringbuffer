@@ -26,6 +26,7 @@ func TestRingBuffer(t *testing.T) {
 
 func BenchmarkRingBuffer(b *testing.B) {
 	hugebuf := make([]byte, 65536)
+	r := New(true)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
