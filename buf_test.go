@@ -18,7 +18,7 @@ func TestRingBuffer(t *testing.T) {
 
 	hugebuf := make([]byte, 4097)
 	hugebuf1 := make([]byte, 4097)
-	n, _ := io.ReadFull(rand.Reader, hugebuf)
+	io.ReadFull(rand.Reader, hugebuf)
 	t.Log(hex.EncodeToString(hugebuf))
 	t.Log(r.Write(hugebuf))
 	t.Log(r.Read(hugebuf1))
