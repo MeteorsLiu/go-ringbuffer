@@ -23,3 +23,15 @@ func TestRingBuffer(t *testing.T) {
 	t.Log(r.Read(hugebuf1))
 	t.Log(hugebuf1[4094], hugebuf1[4095], hugebuf1[4096])
 }
+
+func BenchmarkRingBuffer(b *testing.B) {
+	hugebuf := make([]byte, 65536)
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		io.ReadFull(rand.Reader, hugebuf)
+		r.Write(hugebuf)
+		r.Read(hugebuf)
+	}
+
+}
