@@ -22,6 +22,7 @@ var (
 type buffer struct {
 	buf []byte
 	pos int
+	len int
 }
 
 const (
@@ -127,10 +128,9 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
-	log.Printf("buf size:%d", len(b.buf))
 	n = copy(buf, b.buf)
 	b.pos += n
-	if b.pos == len(b.buf) {
+	if b.pos == b.len {
 		select {
 		case pool.w <- b:
 		default:
@@ -138,8 +138,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
-		nb := len(b.buf)
-		b.buf = b.buf[b.pos:nb]
+		b.buf = b.buf[b.pos:b.len]
 		select {
 		case pool.rleftover <- b:
 		default:
@@ -152,7 +151,7 @@ func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
 	b.buf = b.buf[:n]
-
+	b.len = n
 	select {
 	case pool.r <- b:
 	default:
@@ -167,6 +166,7 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:], buf)
 	b.pos = 0
 	b.buf = b.buf[:n]
+	b.len = n
 	select {
 	case pool.wleftover <- b:
 	default:
