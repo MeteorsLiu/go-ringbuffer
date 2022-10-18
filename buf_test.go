@@ -1,6 +1,7 @@
 package ringbuffer
 
 import (
+	"bytes"
 	"crypto/rand"
 	"io"
 	"testing"
@@ -15,24 +16,18 @@ func TestRingBuffer(t *testing.T) {
 	t.Log(r.Read(smallbuf))
 	t.Log(string(smallbuf))
 
-	hugebuf := make([]byte, 4097)
-	hugebuf1 := make([]byte, 4097)
+	bigbuf := make([]byte, 4097)
+	bigbuf1 := make([]byte, 4097)
+	io.ReadFull(rand.Reader, bigbuf)
+	t.Log(bigbuf[4094], bigbuf[4095], bigbuf[4096])
+	t.Log(r.Write(bigbuf))
+	t.Log(r.Read(bigbuf1))
+	t.Log(bigbuf1[4094], bigbuf1[4095], bigbuf1[4096])
+	// 1MB
+	hugebuf := make([]byte, 1e6)
+	hugebuf1 := make([]byte, 1e6)
 	io.ReadFull(rand.Reader, hugebuf)
-	t.Log(hugebuf[4094], hugebuf[4095], hugebuf[4096])
 	t.Log(r.Write(hugebuf))
 	t.Log(r.Read(hugebuf1))
-	t.Log(hugebuf1[4094], hugebuf1[4095], hugebuf1[4096])
-}
-
-func BenchmarkRingBuffer(b *testing.B) {
-	hugebuf := make([]byte, 65536)
-	r := New(true)
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		io.ReadFull(rand.Reader, hugebuf)
-		r.Write(hugebuf)
-		r.Read(hugebuf)
-	}
-
+	t.Log(bytes.Equal(hugebuf, hugebuf1))
 }
