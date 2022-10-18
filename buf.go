@@ -145,6 +145,9 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 	n = copy(b.buf[0:DEFAULT_BUF_SIZE], buf)
+	if n == 0 {
+		panic("error copy")
+	}
 	b.pos = 0
 	b.buf = b.buf[:n]
 	select {
@@ -159,6 +162,9 @@ func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
 		pool.Flush(WRITING_LEFT)
 	}
 	n = copy(b.buf[0:DEFAULT_BUF_SIZE], buf)
+	if n == 0 {
+		panic("error copy")
+	}
 	b.pos = 0
 	b.buf = b.buf[:n]
 	select {
