@@ -135,6 +135,9 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
 		nb := len(b.buf)
+		if nb == 0 {
+			nb = DEFAULT_BUF_SIZE
+		}
 		b.buf = b.buf[b.pos:nb]
 		select {
 		case pool.rleftover <- b:
