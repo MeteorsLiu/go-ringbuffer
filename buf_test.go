@@ -2,7 +2,6 @@ package ringbuffer
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"io"
 	"testing"
 )
@@ -19,8 +18,8 @@ func TestRingBuffer(t *testing.T) {
 	hugebuf := make([]byte, 4097)
 	hugebuf1 := make([]byte, 4097)
 	io.ReadFull(rand.Reader, hugebuf)
-	t.Log(hex.EncodeToString(hugebuf))
+	t.Log(hugebuf[4094], hugebuf[4095], hugebuf[4096])
 	t.Log(r.Write(hugebuf))
 	t.Log(r.Read(hugebuf1))
-	t.Logf(hex.EncodeToString(hugebuf1))
+	t.Log(hugebuf1[4094], hugebuf1[4095], hugebuf1[4096])
 }
