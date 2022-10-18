@@ -128,7 +128,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
-	n = copy(buf, b.buf[:b.len])
+	n = copy(buf, b.buf)
 	b.pos += n
 	if b.pos == b.len {
 		select {
