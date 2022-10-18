@@ -15,7 +15,8 @@ const (
 )
 
 var (
-	POOL_EMPTY = errors.New("pool is empty")
+	POOL_EMPTY   = errors.New("pool is empty")
+	BUFFER_EMPTY = errors.New("buffer is empty")
 )
 
 type buffer struct {
@@ -133,7 +134,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
-		b.buf = b.buf[b.pos:len(b.buf)]
+		b.buf = b.buf[b.pos:]
 		select {
 		case pool.rleftover <- b:
 		default:
@@ -218,6 +219,10 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 }
 
 func (r *Ring) Read(b []byte) (n int, err error) {
+	if len(b) == 0 {
+		err = BUFFER_EMPTY
+		return
+	}
 	var buf *buffer
 	buf = r.grabReadBuffer()
 	if buf == nil {
@@ -241,6 +246,10 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 }
 
 func (r *Ring) Write(b []byte) (n int, err error) {
+	if len(b) == 0 {
+		err = BUFFER_EMPTY
+		return
+	}
 	var buf *buffer
 	select {
 	case buf = <-r.pool.w:
