@@ -127,9 +127,10 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	if b.pos == 0 {
 		return
 	}
-	n = copy(buf, b.buf[b.pos:])
+	n = copy(buf, b.buf)
 	b.pos -= n
 	if b.pos == 0 {
+		b.buf = b.buf[0:]
 		select {
 		case pool.w <- b:
 		default:
@@ -137,6 +138,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	} else {
 		// if reading is not done, put it into the leftover pool
 		// let's read it again
+		b.buf = b.buf[n:]
 		select {
 		case pool.rleftover <- b:
 		default:
