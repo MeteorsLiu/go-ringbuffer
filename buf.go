@@ -128,7 +128,7 @@ func (p *rwPool) Flush(pool int) {
 func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 	n = copy(buf, b.buf)
 	b.pos += n
-	if b.pos == len(buf) {
+	if b.pos == len(b.buf) {
 		select {
 		case pool.w <- b:
 		default:
