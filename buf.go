@@ -154,7 +154,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 }
 
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
-	n = copy(b.buf[0:cap(buf)], buf)
+	n = copy(b.buf[0:cap(b.buf)], buf)
 	if n == 0 {
 		panic("error copy")
 	}
@@ -168,7 +168,7 @@ func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 }
 
 func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
-	n = copy(b.buf[0:cap(buf)], buf)
+	n = copy(b.buf[0:cap(b.buf)], buf)
 	if n == 0 {
 		panic("error copy")
 	}
