@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -15,6 +16,8 @@ const (
 	BIG_BUF_SIZE = 4096
 	// 2MB per HUGE PAGE
 	HUGE_PAGE_SIZE = 1024 * 1024 * 2
+	// 5 Minute per cleaning period
+	SWEEP_POOL_EXPIRE = 300
 )
 
 var (
@@ -44,6 +47,7 @@ type rwPool struct {
 	// it avoids the memory leak.
 	wrefcnt  int32
 	flushing int32
+	cleaning int64
 }
 type Ring struct {
 	pool         rwPool
@@ -72,7 +76,10 @@ func (p *rwPool) Flush(pool int) {
 		return
 	}
 	atomic.AddInt32(&p.flushing, 1)
-	defer atomic.AddInt32(&p.flushing, -1)
+	defer func() {
+		atomic.CompareAndSwapInt64(&p.cleaning, atomic.LoadInt64(&p.cleaning), time.Now().Unix())
+		atomic.AddInt32(&p.flushing, -1)
+	}()
 	switch pool {
 	case READING_POOL:
 		for len(p.r) == 0 {
@@ -224,6 +231,13 @@ func (r *Ring) grabLeftoverBuffer() *buffer {
 	return buf
 }
 
+func (r *Ring) doSweep() {
+	if atomic.LoadInt32(&r.pool.wrefcnt) == 0 &&
+		len(r.pool.wleftover) > 0 {
+		r.pool.Flush(WRITING_LEFT)
+	}
+}
+
 func (r *Ring) Read(b []byte) (n int, err error) {
 	if len(b) == 0 {
 		err = BUFFER_EMPTY
@@ -247,6 +261,11 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 		n += nr
 	}
 
+	// flush pool if wrefcnt reaches zero
+	// flush process shouldn't be blocked otherwise it will pause the reading.
+	if time.Now().Unix()-r.pool.cleaning >= SWEEP_POOL_EXPIRE {
+		go r.doSweep()
+	}
 	return
 }
 
@@ -277,11 +296,10 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 
 	}
 	n = buf.write(&r.pool, b)
-	// flush pool if wrefcnt reaches zero
 	if n < len(b) {
-		if atomic.LoadInt32(&r.pool.wrefcnt) == 0 && len(r.pool.wleftover) > 0 {
-			r.pool.Flush(WRITING_LEFT)
-		}
+		// notice another reader not to flush the pool.
+		atomic.AddInt32(&r.pool.wrefcnt, 1)
+		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
 	}
 	for n < len(b) {
 		select {
