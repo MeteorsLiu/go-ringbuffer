@@ -8,10 +8,11 @@ import (
 
 const (
 	DEFAULT_RING_LEN = 1024
-
+	SMALL_BUF_SIZE   = 1024
+	MIDDLE_BUF_SIZE  = 2048
 	// By default, the PAGE_SIZE is 4096 Bytes.
 	// so may be more efficient for slices?
-	DEFAULT_BUF_SIZE = 4096
+	BIG_BUF_SIZE = 4096
 	// 2MB per HUGE PAGE
 	HUGE_PAGE_SIZE = 1024 * 1024 * 2
 )
@@ -146,7 +147,7 @@ func (b *buffer) read(pool *rwPool, buf []byte) (n int) {
 }
 
 func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
-	n = copy(b.buf[0:DEFAULT_BUF_SIZE], buf)
+	n = copy(b.buf[0:cap(buf)], buf)
 	if n == 0 {
 		panic("error copy")
 	}
@@ -160,10 +161,7 @@ func (b *buffer) write(pool *rwPool, buf []byte) (n int) {
 }
 
 func (b *buffer) write_leftover(pool *rwPool, buf []byte) (n int) {
-	if atomic.LoadInt32(&pool.wrefcnt) == 0 && len(pool.wleftover) > 0 {
-		pool.Flush(WRITING_LEFT)
-	}
-	n = copy(b.buf[0:DEFAULT_BUF_SIZE], buf)
+	n = copy(b.buf[0:cap(buf)], buf)
 	if n == 0 {
 		panic("error copy")
 	}
@@ -252,6 +250,18 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 	return
 }
 
+func allocs(size int) int {
+	if size <= SMALL_BUF_SIZE {
+		return SMALL_BUF_SIZE
+	} else if size <= MIDDLE_BUF_SIZE {
+		return MIDDLE_BUF_SIZE
+	} else if size <= BIG_BUF_SIZE {
+		return BIG_BUF_SIZE
+	} else {
+		return HUGE_PAGE_SIZE
+	}
+}
+
 func (r *Ring) Write(b []byte) (n int, err error) {
 	if len(b) == 0 {
 		err = BUFFER_EMPTY
@@ -261,36 +271,26 @@ func (r *Ring) Write(b []byte) (n int, err error) {
 	select {
 	case buf = <-r.pool.w:
 	default:
-		if len(b) >= HUGE_PAGE_SIZE {
-			buf = &buffer{
-				buf: make([]byte, HUGE_PAGE_SIZE),
-			}
-		} else {
-			buf = &buffer{
-				buf: make([]byte, DEFAULT_BUF_SIZE),
-			}
+		buf = &buffer{
+			buf: make([]byte, allocs(len(b))),
 		}
 
 	}
 	n = buf.write(&r.pool, b)
-	// no to clean the pool while writing the leftover
+	// flush pool if wrefcnt reaches zero
 	if n < len(b) {
-		atomic.AddInt32(&r.pool.wrefcnt, 1)
-		defer atomic.AddInt32(&r.pool.wrefcnt, -1)
+		if atomic.LoadInt32(&r.pool.wrefcnt) == 0 && len(r.pool.wleftover) > 0 {
+			r.pool.Flush(WRITING_LEFT)
+		}
 	}
 	for n < len(b) {
 		select {
 		case buf = <-r.pool.w:
 		default:
-			if len(b) >= HUGE_PAGE_SIZE {
-				buf = &buffer{
-					buf: make([]byte, HUGE_PAGE_SIZE),
-				}
-			} else {
-				buf = &buffer{
-					buf: make([]byte, DEFAULT_BUF_SIZE),
-				}
+			buf = &buffer{
+				buf: make([]byte, allocs(len(b))),
 			}
+
 		}
 		nw := buf.write_leftover(&r.pool, b[n:])
 		n += nw
