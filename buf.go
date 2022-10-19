@@ -260,7 +260,9 @@ func (r *Ring) Read(b []byte) (n int, err error) {
 		nr := buf.read(&r.pool, b[n:])
 		n += nr
 	}
-
+	if r.pool.cleaning == 0 {
+		r.pool.cleaning = time.Now().Unix()
+	}
 	// flush pool if wrefcnt reaches zero
 	// flush process shouldn't be blocked otherwise it will pause the reading.
 	if time.Now().Unix()-r.pool.cleaning >= SWEEP_POOL_EXPIRE {
